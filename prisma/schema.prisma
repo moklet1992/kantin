@@ -1,0 +1,119 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin_stan
+  siswa
+}
+
+enum StatusTransaksi {
+  belum_dikonfirm
+  dimasak
+  diantar
+  sampai
+}
+
+enum JenisMenu {
+  makanan
+  minuman
+}
+
+model Users {
+  id       Int    @id @default(autoincrement())
+  username String @unique @db.VarChar(100)
+  password String @db.VarChar(100)
+  role     Role
+  siswa    Siswa?
+  stan     Stan?
+}
+
+model Siswa {
+  id         Int         @id @default(autoincrement())
+  nama_siswa String      @db.VarChar(100)
+  alamat     String      @db.Text
+  telp       String      @db.VarChar(20)
+  foto       String?     @db.VarChar(255)
+  id_user    Int         @unique
+  user       Users       @relation(fields: [id_user], references: [id], onDelete: Cascade)
+  transaksi  Transaksi[]
+}
+
+model Stan {
+  id           Int         @id @default(autoincrement())
+  nama_stan    String      @db.VarChar(100)
+  nama_pemilik String      @db.VarChar(100)
+  telp         String      @db.VarChar(20)
+  id_user      Int         @unique
+  user         Users       @relation(fields: [id_user], references: [id], onDelete: Cascade)
+  menu         Menu[]
+  transaksi    Transaksi[]
+}
+
+model Menu {
+  id              Int               @id @default(autoincrement())
+  nama_makanan    String            @db.VarChar(100)
+  harga           Float
+  jenis           JenisMenu
+  foto            String?           @db.VarChar(255)
+  deskripsi       String            @db.Text
+  id_stan         Int
+  stan            Stan              @relation(fields: [id_stan], references: [id], onDelete: Cascade)
+  detailTransaksi DetailTransaksi[]
+  menuDiskon      MenuDiskon[]
+}
+
+model Transaksi {
+  id       Int               @id @default(autoincrement())
+  tanggal  DateTime          @default(now())
+  id_stan  Int
+  stan     Stan              @relation(fields: [id_stan], references: [id], onDelete: Cascade)
+  id_siswa Int
+  siswa    Siswa             @relation(fields: [id_siswa], references: [id], onDelete: Cascade)
+  status   StatusTransaksi   @default(belum_dikonfirm)
+  detail   DetailTransaksi[]
+}
+
+model DetailTransaksi {
+  id           Int       @id @default(autoincrement())
+  qty          Int
+  harga_beli   Float
+  id_transaksi Int
+  transaksi    Transaksi @relation(fields: [id_transaksi], references: [id], onDelete: Cascade)
+  id_menu      Int
+  menu         Menu      @relation(fields: [id_menu], references: [id], onDelete: Cascade)
+
+  @@index([id_transaksi])
+  @@index([id_menu])
+}
+
+model Diskon {
+  id                Int      @id @default(autoincrement())
+  nama_diskon       String   @db.VarChar(100)
+  persentase_diskon Float
+  tanggal_awal      DateTime
+  tanggal_akhir     DateTime
+
+  menuDiskon MenuDiskon[]
+}
+
+model MenuDiskon {
+  id        Int    @id @default(autoincrement())
+  id_menu   Int
+  menu      Menu   @relation(fields: [id_menu], references: [id], onDelete: Cascade)
+  id_diskon Int
+  diskon    Diskon @relation(fields: [id_diskon], references: [id], onDelete: Cascade)
+
+  @@unique([id_menu, id_diskon])
+}
